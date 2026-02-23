@@ -96,6 +96,46 @@ class GiftApiTest {
         assertThat(unchanged.getQuantity()).isEqualTo(2);
     }
 
+    @Sql("/sql/common-init.sql")
+    @Test
+    void 존재하지_않는_옵션으로_선물_보내기_시_실패한다() {
+        RestAssured.given()
+            .contentType(ContentType.JSON)
+            .header("Member-Id", 1L)
+            .body("""
+                {
+                    "optionId": 999,
+                    "quantity": 1,
+                    "receiverId": 2,
+                    "message": "선물"
+                }
+                """)
+        .when()
+            .post("/api/gifts")
+        .then()
+            .statusCode(500);
+    }
+
+    @Sql("/sql/common-init.sql")
+    @Test
+    void 옵션_ID에_잘못된_타입을_보내면_실패한다() {
+        RestAssured.given()
+            .contentType(ContentType.JSON)
+            .header("Member-Id", 1L)
+            .body("""
+                {
+                    "optionId": "잘못된값",
+                    "quantity": 1,
+                    "receiverId": 2,
+                    "message": "선물"
+                }
+                """)
+        .when()
+            .post("/api/gifts")
+        .then()
+            .statusCode(400);
+    }
+
     @Sql({"/sql/common-init.sql", "/sql/gift/zero-stock.sql"})
     @Test
     void 재고가_0일_때_실패한다() {

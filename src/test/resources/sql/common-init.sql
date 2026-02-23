@@ -8,5 +8,8 @@ SET REFERENTIAL_INTEGRITY TRUE;
 
 INSERT INTO member (id, name, email) VALUES (1, '보내는사람', 'sender@test.com');
 INSERT INTO member (id, name, email) VALUES (2, '받는사람', 'receiver@test.com');
+ALTER TABLE member ALTER COLUMN id RESTART WITH 3;
+
 INSERT INTO category (id, name) VALUES (1, '식품');
 INSERT INTO category (id, name) VALUES (2, '패션');
+ALTER TABLE category ALTER COLUMN id RESTART WITH 3;
