@@ -9,6 +9,7 @@ import io.cucumber.java.en.When;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 
@@ -29,11 +30,14 @@ public class WishStepDefinitions {
     @Autowired
     private DataSource dataSource;
 
+    @Value("${test.sql.base-path:sql}")
+    private String sqlBasePath;
+
     @Given("상품 {long}이 존재한다")
     public void 상품이_존재한다(long productId) throws Exception {
         try (Connection conn = dataSource.getConnection()) {
-            ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/common-init.sql"));
-            ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/wish/success.sql"));
+            ScriptUtils.executeSqlScript(conn, new ClassPathResource(sqlBasePath + "/common-init.sql"));
+            ScriptUtils.executeSqlScript(conn, new ClassPathResource(sqlBasePath + "/wish/success.sql"));
         }
     }
 

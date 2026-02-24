@@ -22,6 +22,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	runtimeOnly 'com.h2database:h2'
+	runtimeOnly 'org.postgresql:postgresql'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'io.rest-assured:rest-assured'
 	testImplementation 'io.cucumber:cucumber-java:7.22.1'
@@ -41,4 +42,32 @@ task cucumberTest(type: Test) {
 	useJUnitPlatform {
 		includeEngines 'cucumber'
 	}
+}
+
+task startDB(type: Exec) {
+	commandLine 'docker', 'compose', 'up', '-d', '--wait'
+	doFirst {
+		println 'PostgreSQL 컨테이너 시작 중...'
+	}
+	doLast {
+		println 'PostgreSQL 준비 완료'
+	}
+}
+
+task stopDB(type: Exec) {
+	commandLine 'docker', 'compose', 'down'
+	doFirst {
+		println 'PostgreSQL 컨테이너 종료 중...'
+	}
+}
+
+task cucumberPostgresTest(type: Test) {
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeEngines 'cucumber'
+	}
+	systemProperty 'spring.profiles.active', 'cucumber'
+	dependsOn startDB
+	finalizedBy stopDB
 }

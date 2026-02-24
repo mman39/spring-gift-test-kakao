@@ -4,6 +4,7 @@ import gift.cucumber.ScenarioContext;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 
@@ -18,10 +19,13 @@ public class CommonStepDefinitions {
     @Autowired
     private DataSource dataSource;
 
+    @Value("${test.sql.base-path:sql}")
+    private String sqlBasePath;
+
     @Given("공통 데이터가 초기화되어 있다")
     public void 공통_데이터가_초기화되어_있다() throws Exception {
         try (Connection conn = dataSource.getConnection()) {
-            ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/common-init.sql"));
+            ScriptUtils.executeSqlScript(conn, new ClassPathResource(sqlBasePath + "/common-init.sql"));
         }
     }
 

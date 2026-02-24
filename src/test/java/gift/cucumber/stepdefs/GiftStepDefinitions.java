@@ -9,6 +9,7 @@ import io.cucumber.java.en.When;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 
@@ -28,15 +29,18 @@ public class GiftStepDefinitions {
     @Autowired
     private DataSource dataSource;
 
+    @Value("${test.sql.base-path:sql}")
+    private String sqlBasePath;
+
     @Given("재고가 {int}인 옵션이 존재한다")
     public void 재고가_N인_옵션이_존재한다(int quantity) throws Exception {
         try (Connection conn = dataSource.getConnection()) {
-            ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/common-init.sql"));
+            ScriptUtils.executeSqlScript(conn, new ClassPathResource(sqlBasePath + "/common-init.sql"));
             String sqlFile = switch (quantity) {
-                case 10 -> "sql/gift/success.sql";
-                case 5 -> "sql/gift/exact-quantity.sql";
-                case 2 -> "sql/gift/insufficient-stock.sql";
-                case 0 -> "sql/gift/zero-stock.sql";
+                case 10 -> sqlBasePath + "/gift/success.sql";
+                case 5 -> sqlBasePath + "/gift/exact-quantity.sql";
+                case 2 -> sqlBasePath + "/gift/insufficient-stock.sql";
+                case 0 -> sqlBasePath + "/gift/zero-stock.sql";
                 default -> throw new IllegalArgumentException("미지원 재고 수량: " + quantity);
             };
             ScriptUtils.executeSqlScript(conn, new ClassPathResource(sqlFile));
