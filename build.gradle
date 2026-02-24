@@ -71,3 +71,31 @@ task cucumberPostgresTest(type: Test) {
 	dependsOn startDB
 	finalizedBy stopDB
 }
+
+task startContainers(type: Exec) {
+	commandLine 'docker', 'compose', '-f', 'docker-compose.container.yml', 'up', '-d', '--wait', '--build'
+	doFirst {
+		println 'App + PostgreSQL 컨테이너 시작 중...'
+	}
+	doLast {
+		println '컨테이너 준비 완료'
+	}
+}
+
+task stopContainers(type: Exec) {
+	commandLine 'docker', 'compose', '-f', 'docker-compose.container.yml', 'down'
+	doFirst {
+		println '컨테이너 종료 중...'
+	}
+}
+
+task cucumberContainerTest(type: Test) {
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeEngines 'cucumber'
+	}
+	systemProperty 'cucumber.glue', 'gift.container,gift.cucumber.stepdefs'
+	dependsOn startContainers
+	finalizedBy stopContainers
+}
