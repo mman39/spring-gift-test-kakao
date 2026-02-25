@@ -29,7 +29,7 @@ class CategoryApiTest {
         RestAssured.port = port;
     }
 
-    @Sql("/sql/common-init.sql")
+    @Sql({"/sql/h2/cleanup.sql", "/sql/common-data.sql", "/sql/h2/reset-sequences.sql"})
     @Test
     void 카테고리_생성_성공() {
         RestAssured.given()

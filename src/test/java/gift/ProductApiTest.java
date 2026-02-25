@@ -29,7 +29,7 @@ class ProductApiTest {
         RestAssured.port = port;
     }
 
-    @Sql("/sql/common-init.sql")
+    @Sql({"/sql/h2/cleanup.sql", "/sql/common-data.sql", "/sql/h2/reset-sequences.sql"})
     @Test
     void 상품_등록_성공() {
         RestAssured.given()
@@ -53,7 +53,7 @@ class ProductApiTest {
         assertThat(products.get(0).getCategory().getId()).isEqualTo(1L);
     }
 
-    @Sql("/sql/common-init.sql")
+    @Sql({"/sql/h2/cleanup.sql", "/sql/common-data.sql", "/sql/h2/reset-sequences.sql"})
     @Test
     void 가격에_잘못된_타입을_보내면_실패한다() {
         RestAssured.given()
@@ -75,7 +75,7 @@ class ProductApiTest {
         assertThat(products).isEmpty();
     }
 
-    @Sql("/sql/common-init.sql")
+    @Sql({"/sql/h2/cleanup.sql", "/sql/common-data.sql", "/sql/h2/reset-sequences.sql"})
     @Test
     void 존재하지_않는_카테고리로_상품_등록_시_실패한다() {
         RestAssured.given()

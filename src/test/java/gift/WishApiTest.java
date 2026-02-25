@@ -29,7 +29,8 @@ class WishApiTest {
         RestAssured.port = port;
     }
 
-    @Sql({"/sql/common-init.sql", "/sql/wish/success.sql"})
+    @Sql({"/sql/h2/cleanup.sql", "/sql/common-data.sql", "/sql/h2/reset-sequences.sql",
+        "/sql/wish/success.sql"})
     @Test
     void 위시리스트_추가_성공() {
         RestAssured.given()
@@ -51,7 +52,7 @@ class WishApiTest {
         assertThat(wishes.get(0).getProduct().getId()).isEqualTo(1L);
     }
 
-    @Sql("/sql/common-init.sql")
+    @Sql({"/sql/h2/cleanup.sql", "/sql/common-data.sql", "/sql/h2/reset-sequences.sql"})
     @Test
     void 존재하지_않는_상품에_위시리스트_추가_시_실패한다() {
         RestAssured.given()
@@ -71,7 +72,7 @@ class WishApiTest {
         assertThat(wishes).isEmpty();
     }
 
-    @Sql("/sql/common-init.sql")
+    @Sql({"/sql/h2/cleanup.sql", "/sql/common-data.sql", "/sql/h2/reset-sequences.sql"})
     @Test
     void 상품_ID에_잘못된_타입을_보내면_실패한다() {
         RestAssured.given()
@@ -91,7 +92,8 @@ class WishApiTest {
         assertThat(wishes).isEmpty();
     }
 
-    @Sql({"/sql/common-init.sql", "/sql/wish/invalid-member.sql"})
+    @Sql({"/sql/h2/cleanup.sql", "/sql/common-data.sql", "/sql/h2/reset-sequences.sql",
+        "/sql/wish/invalid-member.sql"})
     @Test
     void 존재하지_않는_회원이_위시리스트_추가_시_실패한다() {
         RestAssured.given()
