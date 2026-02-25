@@ -1,6 +1,10 @@
 package gift.cucumber.stepdefs;
 
 import gift.cucumber.ScenarioContext;
+import gift.model.Member;
+import gift.model.MemberRepository;
+import gift.model.Product;
+import gift.model.ProductRepository;
 import gift.model.Wish;
 import gift.model.WishRepository;
 import io.cucumber.java.en.And;
@@ -28,28 +32,82 @@ public class WishStepDefinitions {
     private WishRepository wishRepository;
 
     @Autowired
+    private MemberRepository memberRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
     private DataSource dataSource;
 
-    @Value("${test.sql.base-path:sql}")
-    private String sqlBasePath;
+    @Value("${test.sql.dialect:h2}")
+    private String sqlDialect;
 
-    @Given("상품 {long}이 존재한다")
-    public void 상품이_존재한다(long productId) throws Exception {
+    @Given("상품 {string}이 존재한다")
+    public void 상품이_존재한다(String productName) throws Exception {
         try (Connection conn = dataSource.getConnection()) {
-            ScriptUtils.executeSqlScript(conn, new ClassPathResource(sqlBasePath + "/common-init.sql"));
-            ScriptUtils.executeSqlScript(conn, new ClassPathResource(sqlBasePath + "/wish/success.sql"));
+            ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/common-data.sql"));
+            ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/" + sqlDialect + "/reset-sequences.sql"));
+            ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/wish/success.sql"));
         }
     }
 
-    @When("회원 {long}이 상품 {long}을 위시리스트에 추가한다")
-    public void 회원이_상품을_위시리스트에_추가한다(long memberId, long productId) {
+    @When("{string}이 {string}을 위시리스트에 추가한다")
+    public void 회원이_상품을_위시리스트에_추가한다(String memberName, String productName) {
+        Member member = memberRepository.findAll().stream()
+            .filter(m -> m.getName().equals(memberName))
+            .findFirst()
+            .orElseThrow();
+        Product product = productRepository.findAll().stream()
+            .filter(p -> p.getName().equals(productName))
+            .findFirst()
+            .orElseThrow();
+
         context.setResponse(
             RestAssured.given()
                 .contentType(ContentType.JSON)
-                .header("Member-Id", memberId)
+                .header("Member-Id", member.getId())
                 .body("""
                     {"productId": %d}
-                    """.formatted(productId))
+                    """.formatted(product.getId()))
+            .when()
+                .post("/api/wishes")
+        );
+    }
+
+    @When("{string}이 존재하지 않는 상품을 위시리스트에 추가한다")
+    public void 회원이_존재하지_않는_상품을_위시리스트에_추가한다(String memberName) {
+        Member member = memberRepository.findAll().stream()
+            .filter(m -> m.getName().equals(memberName))
+            .findFirst()
+            .orElseThrow();
+
+        context.setResponse(
+            RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Member-Id", member.getId())
+                .body("""
+                    {"productId": 999}
+                    """)
+            .when()
+                .post("/api/wishes")
+        );
+    }
+
+    @When("존재하지 않는 회원이 {string}을 위시리스트에 추가한다")
+    public void 존재하지_않는_회원이_상품을_위시리스트에_추가한다(String productName) {
+        Product product = productRepository.findAll().stream()
+            .filter(p -> p.getName().equals(productName))
+            .findFirst()
+            .orElseThrow();
+
+        context.setResponse(
+            RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Member-Id", 999L)
+                .body("""
+                    {"productId": %d}
+                    """.formatted(product.getId()))
             .when()
                 .post("/api/wishes")
         );
@@ -75,10 +133,10 @@ public class WishStepDefinitions {
         assertThat(wishes).hasSize(expectedCount);
     }
 
-    @And("위시리스트에 회원 {long}과 상품 {long}의 연결이 존재한다")
-    public void 위시리스트에_회원과_상품의_연결이_존재한다(long memberId, long productId) {
+    @And("{string}의 위시리스트에 {string}이 있다")
+    public void 회원의_위시리스트에_상품이_있다(String memberName, String productName) {
         List<Wish> wishes = wishRepository.findAll();
         assertThat(wishes)
-            .anyMatch(w -> w.getMember().getId().equals(memberId) && w.getProduct().getId().equals(productId));
+            .anyMatch(w -> w.getMember().getName().equals(memberName) && w.getProduct().getName().equals(productName));
     }
 }

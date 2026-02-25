@@ -19,20 +19,35 @@ public class CommonStepDefinitions {
     @Autowired
     private DataSource dataSource;
 
-    @Value("${test.sql.base-path:sql}")
-    private String sqlBasePath;
+    @Value("${test.sql.dialect:h2}")
+    private String sqlDialect;
 
     @Given("공통 데이터가 초기화되어 있다")
     public void 공통_데이터가_초기화되어_있다() throws Exception {
         try (Connection conn = dataSource.getConnection()) {
-            ScriptUtils.executeSqlScript(conn, new ClassPathResource(sqlBasePath + "/common-init.sql"));
+            ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/common-data.sql"));
+            ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/" + sqlDialect + "/reset-sequences.sql"));
         }
     }
 
-    @Then("응답 상태 코드가 {int}이다")
-    public void 응답_상태_코드가_N이다(int statusCode) {
+    @Then("요청이 성공한다")
+    public void 요청이_성공한다() {
         context.getResponse()
             .then()
-            .statusCode(statusCode);
+            .statusCode(200);
+    }
+
+    @Then("요청이 실패한다")
+    public void 요청이_실패한다() {
+        context.getResponse()
+            .then()
+            .statusCode(500);
+    }
+
+    @Then("잘못된 요청으로 거부된다")
+    public void 잘못된_요청으로_거부된다() {
+        context.getResponse()
+            .then()
+            .statusCode(400);
     }
 }

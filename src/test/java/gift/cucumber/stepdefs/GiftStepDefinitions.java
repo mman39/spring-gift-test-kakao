@@ -1,6 +1,8 @@
 package gift.cucumber.stepdefs;
 
 import gift.cucumber.ScenarioContext;
+import gift.model.Member;
+import gift.model.MemberRepository;
 import gift.model.Option;
 import gift.model.OptionRepository;
 import io.cucumber.java.en.And;
@@ -27,35 +29,67 @@ public class GiftStepDefinitions {
     private OptionRepository optionRepository;
 
     @Autowired
+    private MemberRepository memberRepository;
+
+    @Autowired
     private DataSource dataSource;
 
-    @Value("${test.sql.base-path:sql}")
-    private String sqlBasePath;
+    @Value("${test.sql.dialect:h2}")
+    private String sqlDialect;
 
     @Given("재고가 {int}인 옵션이 존재한다")
     public void 재고가_N인_옵션이_존재한다(int quantity) throws Exception {
         try (Connection conn = dataSource.getConnection()) {
-            ScriptUtils.executeSqlScript(conn, new ClassPathResource(sqlBasePath + "/common-init.sql"));
+            ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/common-data.sql"));
+            ScriptUtils.executeSqlScript(conn, new ClassPathResource("sql/" + sqlDialect + "/reset-sequences.sql"));
             String sqlFile = switch (quantity) {
-                case 10 -> sqlBasePath + "/gift/success.sql";
-                case 5 -> sqlBasePath + "/gift/exact-quantity.sql";
-                case 2 -> sqlBasePath + "/gift/insufficient-stock.sql";
-                case 0 -> sqlBasePath + "/gift/zero-stock.sql";
+                case 10 -> "sql/gift/success.sql";
+                case 5 -> "sql/gift/exact-quantity.sql";
+                case 2 -> "sql/gift/insufficient-stock.sql";
+                case 0 -> "sql/gift/zero-stock.sql";
                 default -> throw new IllegalArgumentException("미지원 재고 수량: " + quantity);
             };
             ScriptUtils.executeSqlScript(conn, new ClassPathResource(sqlFile));
         }
     }
 
-    @When("회원 {long}이 옵션 {long}을 {int}개 선물한다")
-    public void 회원이_옵션을_N개_선물한다(long memberId, long optionId, int quantity) {
+    @When("{string}이 {string} 옵션을 {int}개 선물한다")
+    public void 회원이_옵션을_N개_선물한다(String memberName, String optionName, int quantity) {
+        Member member = memberRepository.findAll().stream()
+            .filter(m -> m.getName().equals(memberName))
+            .findFirst()
+            .orElseThrow();
+        Option option = optionRepository.findAll().stream()
+            .filter(o -> o.getName().equals(optionName))
+            .findFirst()
+            .orElseThrow();
+
         context.setResponse(
             RestAssured.given()
                 .contentType(ContentType.JSON)
-                .header("Member-Id", memberId)
+                .header("Member-Id", member.getId())
                 .body("""
                     {"optionId": %d, "quantity": %d, "receiverId": 2, "message": "선물"}
-                    """.formatted(optionId, quantity))
+                    """.formatted(option.getId(), quantity))
+            .when()
+                .post("/api/gifts")
+        );
+    }
+
+    @When("{string}이 존재하지 않는 옵션을 {int}개 선물한다")
+    public void 회원이_존재하지_않는_옵션을_N개_선물한다(String memberName, int quantity) {
+        Member member = memberRepository.findAll().stream()
+            .filter(m -> m.getName().equals(memberName))
+            .findFirst()
+            .orElseThrow();
+
+        context.setResponse(
+            RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Member-Id", member.getId())
+                .body("""
+                    {"optionId": 999, "quantity": %d, "receiverId": 2, "message": "선물"}
+                    """.formatted(quantity))
             .when()
                 .post("/api/gifts")
         );
@@ -75,9 +109,12 @@ public class GiftStepDefinitions {
         );
     }
 
-    @And("옵션 {long}의 재고가 {int}이다")
-    public void 옵션의_재고가_N이다(long optionId, int expectedQuantity) {
-        Option option = optionRepository.findById(optionId).orElseThrow();
+    @And("{string} 옵션의 재고가 {int}이다")
+    public void 옵션의_재고가_N이다(String optionName, int expectedQuantity) {
+        Option option = optionRepository.findAll().stream()
+            .filter(o -> o.getName().equals(optionName))
+            .findFirst()
+            .orElseThrow();
         assertThat(option.getQuantity()).isEqualTo(expectedQuantity);
     }
 }

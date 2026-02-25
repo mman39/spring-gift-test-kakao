@@ -1,6 +1,8 @@
 package gift.cucumber.stepdefs;
 
 import gift.cucumber.ScenarioContext;
+import gift.model.Category;
+import gift.model.CategoryRepository;
 import gift.model.Product;
 import gift.model.ProductRepository;
 import io.cucumber.java.en.And;
@@ -21,14 +23,35 @@ public class ProductStepDefinitions {
     @Autowired
     private ProductRepository productRepository;
 
-    @When("이름이 {string}이고 가격이 {int}이고 카테고리가 {long}인 상품을 등록한다")
-    public void 상품을_등록한다(String name, int price, long categoryId) {
+    @Autowired
+    private CategoryRepository categoryRepository;
+
+    @When("이름이 {string}이고 가격이 {int}이고 카테고리가 {string}인 상품을 등록한다")
+    public void 상품을_등록한다(String name, int price, String categoryName) {
+        Category category = categoryRepository.findAll().stream()
+            .filter(c -> c.getName().equals(categoryName))
+            .findFirst()
+            .orElseThrow();
+
         context.setResponse(
             RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body("""
                     {"name": "%s", "price": %d, "imageUrl": "img.jpg", "categoryId": %d}
-                    """.formatted(name, price, categoryId))
+                    """.formatted(name, price, category.getId()))
+            .when()
+                .post("/api/products")
+        );
+    }
+
+    @When("이름이 {string}이고 가격이 {int}이고 존재하지 않는 카테고리로 상품을 등록한다")
+    public void 존재하지_않는_카테고리로_상품을_등록한다(String name, int price) {
+        context.setResponse(
+            RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                    {"name": "%s", "price": %d, "imageUrl": "img.jpg", "categoryId": 999}
+                    """.formatted(name, price))
             .when()
                 .post("/api/products")
         );
@@ -53,10 +76,10 @@ public class ProductStepDefinitions {
         assertThat(products).hasSize(expectedCount);
     }
 
-    @And("상품 {string}의 카테고리 ID가 {long}이다")
-    public void 상품의_카테고리_ID가_N이다(String productName, long categoryId) {
+    @And("상품 {string}의 카테고리가 {string}이다")
+    public void 상품의_카테고리가_N이다(String productName, String categoryName) {
         List<Product> products = productRepository.findAll();
         assertThat(products)
-            .anyMatch(p -> p.getName().equals(productName) && p.getCategory().getId().equals(categoryId));
+            .anyMatch(p -> p.getName().equals(productName) && p.getCategory().getName().equals(categoryName));
     }
 }
